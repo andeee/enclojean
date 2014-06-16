@@ -1,4 +1,4 @@
-enclocean
+enclojean
 =========
 
 Clojure Enocean library
