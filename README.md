@@ -1,4 +1,4 @@
 enclojean
 =========
 
-Clojure Enocean library
+Clojure EnOcean library
