@@ -4,7 +4,7 @@
   :license {:name "Apache Licence, Version 2.0"
             :url "http://www.apache.org/licenses/LICENSE-2.0"}
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [aleph "0.3.2"]]
+                 [gloss "0.2.2"]]
   :profiles {:dev
              {:dependencies [[midje "1.6.3"]]
               :plugins [[lein-midje "3.1.1"]]}}
