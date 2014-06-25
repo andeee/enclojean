@@ -1,19 +1,20 @@
 (ns enclojean.byte-test
   (:use midje.sweet)
-  (:require [enclojean.byte :as byte]
-            [gloss.io :as gio]
-            [gloss.core :as gc]))
+  (:require [enclojean.byte :refer [calc-crc8 crc8-frame unchecked-byte-array]]
+            [gloss.io :refer [contiguous encode decode]]
+            [gloss.core :refer [compile-frame]]
+            [byte-streams :refer [to-byte-array]]))
 
 (defn TV [byte-seq]
-    (byte/unchecked-byte-array byte-seq))
+    (unchecked-byte-array byte-seq))
 
 (facts "about `calc-crc8`"
   (fact "calculated crc of empty or 0 is 0"
-    (byte/calc-crc8 (TV [0x00])) => 0x00
-    (byte/calc-crc8 (TV []))     => 0x00)
+    (calc-crc8 (TV [0x00])) => 0x00
+    (calc-crc8 (TV []))     => 0x00)
   (tabular
    (fact "calculated crc of test vectors is valid"
-     (byte/calc-crc8 (TV ?test-vector)) => ?expected)
+     (calc-crc8 (TV ?test-vector)) => ?expected)
    ; extracted from http://blog.xivo.io/public/smbus_pec_crc8_test_vectors.txt
    ?test-vector          ?expected
    [0x01]                0x07
@@ -81,17 +82,16 @@
     0x2D 0x00]           0xC6))
 
 (defn encode-crc8 [v]
-  (-> (gc/compile-frame :byte)
-      byte/crc8-frame
-      (gio/encode v)
-      gio/contiguous
-      .array
+  (-> (compile-frame :byte)
+      crc8-frame
+      (encode v)
+      to-byte-array
       vec))
 
 (defn decode-crc8 [x]
-  (-> (gc/compile-frame :byte)
-      byte/crc8-frame
-      (gio/decode x)))
+  (-> (compile-frame :byte)
+      crc8-frame
+      (decode x)))
 
 (facts "about `crc8-frame`"
   (tabular
@@ -104,4 +104,4 @@
    0x04    [0x04 0x1C])
   (fact "decoding checks for crc8 checksum"
     (decode-crc8 (TV [0x01 0x07])) => 0x01
-    (decode-crc8 (TV [0x01 0xFF])) =throws=> (Exception.)))
+    (decode-crc8 (TV [0x01 0xFF])) => (throws Exception)))

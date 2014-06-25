@@ -1,8 +1,9 @@
 (ns enclojean.byte
-  (:use
-   [gloss.data bytes string primitives]
-   [gloss.core protocols structure formats]
-   [gloss.io :only [contiguous]]))
+  (:require [gloss.core.protocols :refer [Reader Writer read-bytes
+                                          write-bytes sizeof]]
+            [gloss.data.bytes :refer [drop-bytes dup-bytes take-bytes]]
+            [gloss.io :refer [contiguous to-buf-seq]]
+            [byte-streams :refer [to-byte-buffers to-byte-array]]))
 
 (defn unchecked-byte-array [seq]
   (byte-array (map unchecked-byte seq)))
@@ -50,9 +51,6 @@
                  lookup-index (unsigned-byte (bit-xor crc current-byte))]
              (unsigned-byte (aget crc8-table lookup-index)))))
 
-(defn to-byte-array [buf-seq]
-  (.array (contiguous buf-seq)))
-
 (defn crc8-frame [codec]
   (reify
     Reader
@@ -60,19 +58,20 @@
       (let [len (sizeof codec)
             [_ x remainder] (read-bytes codec (take-bytes (dup-bytes buf-seq) len))
             expected-crc8 (unchecked-byte (calc-crc8 (to-byte-array (take-bytes buf-seq len))))
-            decoded-crc8 (aget (to-byte-array take-bytes buf-seq) 0)
+            decoded-crc8 (aget (to-byte-array (take-bytes (drop-bytes buf-seq len) 1)) 0)
             success (= expected-crc8 decoded-crc8)]
-        (println (str expected-crc8 " = " decoded-crc8))
-        [true x (drop-bytes remainder 1)]))
+        [success x (drop-bytes remainder 1)]))
     Writer
     (sizeof [_]
       (+ (sizeof codec) 1))
     (write-bytes [_ buf-seq v]
       (let [buf-seq (write-bytes codec buf-seq v)
             buf-bytes (to-byte-array buf-seq)
+            single-byte-to-array (fn [b] (conj [] b))
             crc8-buf-seq (-> buf-bytes
                              calc-crc8
                              unchecked-byte
-                             to-byte-buffer
-                             to-buf-seq)]
+                             single-byte-to-array
+                             byte-array
+                             to-byte-buffers)]
         (concat buf-seq crc8-buf-seq)))))
