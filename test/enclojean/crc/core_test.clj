@@ -1,12 +1,7 @@
-(ns enclojean.byte-test
+(ns enclojean.crc.core-test
   (:use midje.sweet)
-  (:require [enclojean.byte :refer [calc-crc8 crc8-frame unchecked-byte-array]]
-            [gloss.io :refer [contiguous encode decode]]
-            [gloss.core :refer [compile-frame]]
-            [byte-streams :refer [to-byte-array]]))
-
-(defn TV [byte-seq]
-    (unchecked-byte-array byte-seq))
+  (:require [enclojean.crc.core :refer [calc-crc8]]
+            [enclojean.test-utils :refer [TV]]))
 
 (facts "about `calc-crc8`"
   (fact "calculated crc of empty or 0 is 0"
@@ -80,28 +75,3 @@
     0xFE 0xBC 0x30 0x01
     0xFF 0xFF 0xFF 0xFF
     0x2D 0x00]           0xC6))
-
-(defn encode-crc8 [v]
-  (-> (compile-frame :byte)
-      crc8-frame
-      (encode v)
-      to-byte-array
-      vec))
-
-(defn decode-crc8 [x]
-  (-> (compile-frame :byte)
-      crc8-frame
-      (decode x)))
-
-(facts "about `crc8-frame`"
-  (tabular
-   (fact "encoding appends crc8 checksum"
-     (encode-crc8 ?a-byte) => ?expected)
-   ?a-byte ?expected
-   0x01    [0x01 0x07]
-   0x02    [0x02 0x0E]
-   0x03    [0x03 0x09]
-   0x04    [0x04 0x1C])
-  (fact "decoding checks for crc8 checksum"
-    (decode-crc8 (TV [0x01 0x07])) => 0x01
-    (decode-crc8 (TV [0x01 0xFF])) => (throws Exception)))
