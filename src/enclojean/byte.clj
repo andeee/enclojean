@@ -51,14 +51,23 @@
                  lookup-index (unsigned-byte (bit-xor crc current-byte))]
              (unsigned-byte (aget crc8-table lookup-index)))))
 
+(defn calc-crc8<-buf-seq [buf-seq]
+  (-> (to-byte-array buf-seq) calc-crc8 unchecked-byte))
+
+(defn read-crc8 [buf-seq]
+  (-> (to-byte-array buf-seq) (aget 0)))
+
+(defn byte-to-buf-seq [b]
+  (-> (conj [] b) byte-array to-byte-buffers))
+
 (defn crc8-frame [codec]
   (reify
     Reader
     (read-bytes [_ buf-seq]
       (let [len (sizeof codec)
             [_ x remainder] (read-bytes codec (take-bytes (dup-bytes buf-seq) len))
-            expected-crc8 (unchecked-byte (calc-crc8 (to-byte-array (take-bytes buf-seq len))))
-            decoded-crc8 (aget (to-byte-array (take-bytes (drop-bytes buf-seq len) 1)) 0)
+            expected-crc8 (calc-crc8<-buf-seq (take-bytes buf-seq len))
+            decoded-crc8 (read-crc8 (take-bytes (drop-bytes buf-seq len) 1))
             success (= expected-crc8 decoded-crc8)]
         [success x (drop-bytes remainder 1)]))
     Writer
@@ -66,12 +75,5 @@
       (+ (sizeof codec) 1))
     (write-bytes [_ buf-seq v]
       (let [buf-seq (write-bytes codec buf-seq v)
-            buf-bytes (to-byte-array buf-seq)
-            single-byte-to-array (fn [b] (conj [] b))
-            crc8-buf-seq (-> buf-bytes
-                             calc-crc8
-                             unchecked-byte
-                             single-byte-to-array
-                             byte-array
-                             to-byte-buffers)]
+            crc8-buf-seq (byte-to-buf-seq (calc-crc8<-buf-seq buf-seq))]
         (concat buf-seq crc8-buf-seq)))))
