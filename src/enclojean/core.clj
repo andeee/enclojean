@@ -6,17 +6,36 @@
 
 (def sync-frame (enum :ubyte {:sync 0x55}))
 
-(defn header->body [h] (crc8-frame (compile-frame (ordered-map :header h
-                                                               :data (finite-block (:data-length h))
-                                                               :optional-data (finite-block (:optional-length h))))))
+(def packet-type-frame
+  (enum :ubyte
+        {:radio 0x01
+         :response 0x02
+         :radio-sub-telegram 0x03
+         :event 0x04
+         :common-command 0x05
+         :smart-ack-command 0x06
+         :remote-mangement-command 0x07
+         :radio-message 0x09
+         :radio-advanced 0x10}))
 
-(defn body->header [b] {:data-length (.capacity (:data b))
-                        :optional-length (.capacity (:optional-data b))
-                        :packet-type 0})
+(defn header->body [h]
+  (crc8-frame
+   (compile-frame
+    (ordered-map :packet-type (:packet-type h)
+                 :data (finite-block (:data-length h))
+                 :optional-data (finite-block (:optional-length h))))))
 
-(defcodec esp3-frame [sync-frame
-                      (crc8-frame (header (ordered-map :data-length     :uint16
-                                                       :optional-length :ubyte
-                                                       :packet-type     :ubyte)
-                                          header->body
-                                          body->header))])
+(defn body->header [b]
+  {:data-length (.capacity (:data b))
+   :optional-length (.capacity (:optional-data b))
+   :packet-type (:packet-type b)})
+
+(defcodec esp3-frame
+  [sync-frame
+   (header
+    (crc8-frame
+     (ordered-map :data-length     :uint16
+                  :optional-length :ubyte
+                  :packet-type     packet-type-frame))
+    header->body
+    body->header)])

@@ -3,6 +3,11 @@
   (:require [enclojean.crc.core :refer [calc-crc8]]
             [enclojean.test-utils :refer [TV]]))
 
+     ;.;. Actual: 112
+   ;.;. Expected: 0
+;.;. With table substitutions: [?test-vector [0 1 0 5]
+;.;.                            ?expected 0]
+;.;. FAIL "about `calc-crc8` - calculated crc of test vectors is valid" at (NO_SOURCE_FILE:8)
 (facts "about `calc-crc8`"
   (fact "calculated crc of empty or 0 is 0"
     (calc-crc8 (TV [0x00])) => 0x00
@@ -44,6 +49,7 @@
    [0x80 0x00 0x01]      0x0C
    [0x61 0x62 0x63]      0x5F
    [0x00 0x07 0x07 0x01] 0x7A
+   [0x00 0x01 0x00 0x05] 0x70
    [0x30 0x31 0x32 0x33
     0x34 0x35 0x36 0x37
     0x30 0x31 0x32 0x33
