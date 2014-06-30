@@ -2,7 +2,7 @@
   (:require [enclojean.crc.core :refer [calc-crc8]] 
             [gloss.core.protocols :refer [Reader Writer read-bytes
                                           write-bytes sizeof]]
-            [gloss.data.bytes :refer [drop-bytes dup-bytes take-bytes]]
+            [gloss.data.bytes :refer [drop-bytes dup-bytes take-bytes byte-count]]
             [gloss.io :refer [contiguous to-buf-seq]]
             [byte-streams :refer [to-byte-buffers to-byte-array]]))
 
@@ -19,7 +19,7 @@
   (reify
     Reader
     (read-bytes [_ buf-seq]
-      (let [len (sizeof codec)
+      (let [len (- (byte-count buf-seq) 1)
             [_ x remainder] (read-bytes codec (take-bytes (dup-bytes buf-seq) len))
             expected-crc8 (calc-crc8<-buf-seq (take-bytes buf-seq len))
             decoded-crc8 (read-crc8 (take-bytes (drop-bytes buf-seq len) 1))
@@ -27,7 +27,7 @@
         [success x (drop-bytes remainder 1)]))
     Writer
     (sizeof [_]
-      (+ (sizeof codec) 1))
+      nil)
     (write-bytes [_ buf-seq v]
       (let [buf-seq (write-bytes codec buf-seq v)
             crc8-buf-seq (byte-to-buf-seq (calc-crc8<-buf-seq buf-seq))]
