@@ -1,9 +1,9 @@
 (ns enclojean.core-test
   (:use midje.sweet)
   (:require [enclojean.core :refer [esp3-frame]]
-            [enclojean.test-utils :refer [TV]]
+            [enclojean.test-utils :refer [TV TV->buf]]
             [gloss.io :refer [decode encode]]
-            [byte-streams :refer [to-byte-buffer to-byte-array]]))
+            [byte-streams :refer [to-byte-buffer to-byte-buffers to-byte-array]]))
 
 
 (def rocker-switch-telegram (TV [0x55 0x00 0x07 0x07
@@ -23,5 +23,8 @@
 
 (facts "about common commands"
   (fact "encodes co_rd_version"
-    (vec (to-byte-array (encode esp3-frame [:sync {:packet-type :common-command :data (to-byte-buffer (TV [0x03])) :optional-data (to-byte-buffer (TV []))}]))) =>
-    (vec read-version-telegram)))
+    (vec (to-byte-array (encode esp3-frame [:sync {:packet-type :common-command :data (TV->buf [0x03]) :optional-data (TV->buf [])}]))) =>
+    (vec read-version-telegram))
+  (fact "decodes co_rd_version"
+    (decode esp3-frame (to-byte-buffers read-version-telegram)) =>
+    (contains :sync)))

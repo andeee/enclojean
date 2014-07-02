@@ -1,34 +1,47 @@
 (ns enclojean.crc.codec
   (:require [enclojean.crc.core :refer [calc-crc8]] 
             [gloss.core.protocols :refer [Reader Writer read-bytes
-                                          write-bytes sizeof]]
-            [gloss.data.bytes :refer [drop-bytes dup-bytes take-bytes byte-count]]
-            [gloss.io :refer [contiguous to-buf-seq]]
+                                          write-bytes sizeof with-buffer]]
+            [gloss.data.bytes :refer [drop-bytes dup-bytes take-bytes 
+                                      byte-count duplicate]]
             [byte-streams :refer [to-byte-buffers to-byte-array]]))
 
 (defn calc-crc8<-buf-seq [buf-seq]
   (-> (to-byte-array buf-seq) calc-crc8 unchecked-byte))
 
-(defn read-crc8 [buf-seq]
-  (-> (to-byte-array buf-seq) (aget 0)))
-
 (defn byte-to-buf-seq [b]
   (-> (conj [] b) byte-array to-byte-buffers))
+
+(defn calc-crc8<->buf-seq [buf-seq]
+  (byte-to-buf-seq (calc-crc8<-buf-seq buf-seq)))
+
+(defn calc-crc8<->buf [buf]
+  (let [crc8 (-> (to-byte-array (.flip (duplicate buf))) calc-crc8 unchecked-byte)]
+    (.put buf crc8)))
+
+(defn read-crc8 [buf-seq]
+  (-> (to-byte-array buf-seq) (aget 0)))
 
 (defn crc8-frame [codec]
   (reify
     Reader
-    (read-bytes [_ buf-seq]
-      (let [len (- (byte-count buf-seq) 1)
-            [_ x remainder] (read-bytes codec (take-bytes (dup-bytes buf-seq) len))
-            expected-crc8 (calc-crc8<-buf-seq (take-bytes buf-seq len))
-            decoded-crc8 (read-crc8 (take-bytes (drop-bytes buf-seq len) 1))
+    (read-bytes [this buf-seq]
+      (let [len (or (sizeof this) (byte-count buf-seq))
+            available (- len 1)
+            [_ x _] (read-bytes codec (take-bytes (dup-bytes buf-seq) available))
+            expected-crc8 (calc-crc8<-buf-seq (take-bytes buf-seq available))
+            decoded-crc8 (read-crc8 (take-bytes (drop-bytes buf-seq available) 1))
             success (= expected-crc8 decoded-crc8)]
-        [success x (drop-bytes remainder 1)]))
+        [success x (drop-bytes buf-seq len)]))
     Writer
     (sizeof [_]
-      nil)
-    (write-bytes [_ buf-seq v]
-      (let [buf-seq (write-bytes codec buf-seq v)
-            crc8-buf-seq (byte-to-buf-seq (calc-crc8<-buf-seq buf-seq))]
-        (concat buf-seq crc8-buf-seq)))))
+      (if (sizeof codec)
+        (+ (sizeof codec) 1)
+        nil))
+    (write-bytes [this buf v]
+      (if (sizeof this)
+        (with-buffer [buf (sizeof this)]
+          (write-bytes codec buf v)
+          (calc-crc8<->buf buf))
+        (let [buf-seq (write-bytes codec buf v)]
+          (concat buf-seq (calc-crc8<->buf-seq buf-seq)))))))
