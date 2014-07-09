@@ -1,8 +1,8 @@
 (ns enclojean.esp.core
   (:require [enclojean.crc.codec :refer [crc8-frame]]
-            [gloss.core :refer [compile-frame defcodec
-                                enum finite-block header
-                                ordered-map]]))
+            [gloss.core :refer [byte-count compile-frame 
+                                defcodec enum finite-block
+                                header ordered-map]]))
 
 (def sync-frame (enum :ubyte {:sync 0x55}))
 
@@ -28,8 +28,8 @@
   (reify Packet
     (header->body [_ h] [:data (finite-block (:data-length h))
                          :optional-data (finite-block (:optional-length h))])
-    (body->header [_ b] {:data-length (.capacity (:data b))
-                         :optional-length (.capacity (:optional-data b))})))
+    (body->header [_ b] {:data-length (byte-count (:data b))
+                         :optional-length (byte-count (:optional-data b))})))
 
 (defn header->packet-body [h]
   (let [p (packet h)]

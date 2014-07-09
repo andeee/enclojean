@@ -1,5 +1,6 @@
 (ns enclojean.crc.codec
-  (:require [enclojean.crc.core :refer [calc-crc8]] 
+  (:require [enclojean.crc.core :refer [calc-crc8]]
+            [enclojean.bytes :as bytes]
             [gloss.core.protocols :refer [Reader Writer read-bytes
                                           write-bytes sizeof with-buffer]]
             [gloss.data.bytes :refer [drop-bytes dup-bytes take-bytes 
@@ -10,7 +11,7 @@
   (-> (to-byte-array buf-seq) calc-crc8 unchecked-byte))
 
 (defn byte-to-buf-seq [b]
-  (-> (conj [] b) byte-array to-byte-buffers))
+  (-> (bytes/from-seq [b]) to-byte-buffers))
 
 (defn calc-crc8<->buf-seq [buf-seq]
   (byte-to-buf-seq (calc-crc8<-buf-seq buf-seq)))

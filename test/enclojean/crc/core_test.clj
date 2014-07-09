@@ -1,15 +1,15 @@
 (ns enclojean.crc.core-test
   (:use midje.sweet)
   (:require [enclojean.crc.core :refer [calc-crc8]]
-            [enclojean.test-utils :refer [TV]]))
+            [enclojean.bytes :as bytes]))
 
 (facts "about `calc-crc8`"
   (fact "calculated crc of empty or 0 is 0"
-    (calc-crc8 (TV [0x00])) => 0x00
-    (calc-crc8 (TV []))     => 0x00)
+    (calc-crc8 (bytes/from-seq [0x00])) => 0x00
+    (calc-crc8 (bytes/from-seq []))     => 0x00)
   (tabular
    (fact "calculated crc of test vectors is valid"
-     (calc-crc8 (TV ?test-vector)) => ?expected)
+     (calc-crc8 (bytes/from-seq ?test-vector)) => ?expected)
    ; extracted from http://blog.xivo.io/public/smbus_pec_crc8_test_vectors.txt
    ?test-vector          ?expected
    [0x01]                0x07
