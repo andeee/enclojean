@@ -2,7 +2,8 @@
   (:require [enclojean.crc.codec :refer [crc8-frame]]
             [gloss.core :refer [byte-count compile-frame 
                                 defcodec enum finite-block
-                                header ordered-map]]))
+                                header ordered-map]]
+            [gloss.core.structure :refer [convert-sequence]]))
 
 (def sync-frame (enum :ubyte {:sync 0x55}))
 
@@ -35,9 +36,10 @@
   (let [p (packet h)]
     (crc8-frame
      (compile-frame
-      (apply ordered-map 
-             (concat [:packet-type (:packet-type h)]
-                     (header->body p h)))))))
+      [[:packet-type (:packet-type h)]
+       (header->body p h)]
+      identity
+      #(apply hash-map (apply concat %))))))
 
 (defn packet-body->header [b]
   (let [p (packet b)]
