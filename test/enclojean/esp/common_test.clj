@@ -27,12 +27,12 @@
                                   :command :write-reset}])
 
 (def write-sleep-telegram (bytes/from-seq 
-                            [0x55 0x00 0x01 0x00
-                             0x05 0x70 0x01 0x00 
-                             0x00 0x00 0x01 0x0E]))
+                            [0x55 0x00 0x05 0x00
+                             0x05 0xDB 0x01 0x00 
+                             0x00 0x00 0x01 0x65]))
 
 (def write-sleep-decoded [:sync {:packet-type :common-command 
-                                    :command :write-sleep :sleep-period 1}])
+                                 :command :write-sleep :sleep-period 1}])
 
 (facts "about common commands"
   (fact "encodes read-version"
@@ -41,5 +41,9 @@
     (decode-esp read-version-telegram) => read-version-decoded)
   (fact "encodes write-reset"
     (encode-esp write-reset-decoded) => (vec write-reset-telegram))
+  (fact "decodes write-reset"
+    (decode-esp write-reset-telegram) => write-reset-decoded)
   (fact "encodes write-sleep"
-    (encode-esp write-sleep-decoded) => (vec write-sleep-telegram)))
+    (encode-esp write-sleep-decoded) => (vec write-sleep-telegram))
+  (fact "decodes write-sleep"
+    (decode-esp write-sleep-telegram) => write-sleep-decoded))

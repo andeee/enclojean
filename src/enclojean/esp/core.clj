@@ -27,19 +27,28 @@
 
 (defmethod packet :default [a-map]
   (reify Packet
-    (header->body [_ h] [:data (finite-block (:data-length h))
-                         :optional-data (finite-block (:optional-length h))])
+    (header->body [_ h] {:data (finite-block (:data-length h))
+                         :optional-data (finite-block (:optional-length h))})
     (body->header [_ b] {:data-length (byte-count (:data b))
                          :optional-length (byte-count (:optional-data b))})))
+
+(defn pre-encode-header [header]
+  (map #(apply hash-map %)
+       (let [head (first header)
+             remaining (rest header)
+             more? (> (count remaining) 1)]
+         (if more?
+           [head (apply concat remaining)]
+           [head (first remaining)]))))
 
 (defn header->packet-body [h]
   (let [p (packet h)]
     (crc8-frame
      (compile-frame
-      [[:packet-type (:packet-type h)]
+      [{:packet-type (:packet-type h)}
        (header->body p h)]
-      identity
-      #(apply hash-map (apply concat %))))))
+      pre-encode-header
+      #(apply conj %)))))
 
 (defn packet-body->header [b]
   (let [p (packet b)]
