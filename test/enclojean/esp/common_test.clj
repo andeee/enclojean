@@ -16,12 +16,11 @@
   (decode esp (to-byte-buffers (bytes/from-seq telegram))))
 
 (defn command [command-kw & params]
-  [:sync
-   (let [body [:packet-type :common-command :command command-kw]]
-     (apply array-map
-            (if (seq params)
-              (concat body params)
-              body)))])
+  (let [body [:packet-type :common-command :command command-kw]]
+    (apply array-map
+           (if (seq params)
+             (concat body params)
+             body))))
 
 (tabular
  (facts "about common commands"

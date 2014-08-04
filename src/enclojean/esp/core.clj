@@ -1,8 +1,8 @@
 (ns enclojean.esp.core
   (:require [enclojean.crc.codec :refer [crc8-frame]]
             [gloss.core :refer [byte-count compile-frame 
-                                defcodec enum finite-block
-                                header ordered-map]]
+                                defcodec enum header
+                                ordered-map]]
             [gloss.core.structure :refer [convert-sequence]]))
 
 (def sync-frame (enum :ubyte {:sync 0x55}))
@@ -27,19 +27,21 @@
 
 (defmethod packet :default [a-map]
   (reify Packet
-    (header->body [_ h] {:data (finite-block (:data-length h))
-                         :optional-data (finite-block (:optional-length h))})
+    (header->body [_ h] {:data (repeat (:data-length h) :ubyte)
+                         :optional-data (repeat (:optional-length h) :ubyte)})
     (body->header [_ b] {:data-length (byte-count (:data b))
                          :optional-length (byte-count (:optional-data b))})))
 
-(defn pre-encode-header [header]
+(defn split-packet-body [body]
   (map #(apply hash-map %)
-       (let [head (first header)
-             remaining (rest header)
-             more? (> (count remaining) 1)]
-         (if more?
-           [head (apply concat remaining)]
-           [head (first remaining)]))))
+       (let [packet-type (first body)
+             packet-body (rest body)
+             more? (> (count packet-body) 1)
+             packet-body-fn (if more? concat identity)]
+         [packet-type (apply packet-body-fn packet-body)])))
+
+(defn join-packet-body [packet-type-and-body]
+  (apply conj packet-type-and-body))
 
 (defn header->packet-body [h]
   (let [p (packet h)]
@@ -47,20 +49,29 @@
      (compile-frame
       [{:packet-type (:packet-type h)}
        (header->body p h)]
-      pre-encode-header
-      #(apply conj %)))))
+      split-packet-body
+      join-packet-body))))
 
 (defn packet-body->header [b]
   (let [p (packet b)]
     (conj {:packet-type (:packet-type b)}
           (body->header p b))))
 
+(defn prepend-sync [values]
+  (conj [:sync] values))
+
+(defn remove-sync [values]
+  (apply identity (rest values)))
+
 (defcodec esp
-  [sync-frame
-   (header
-    (crc8-frame
-     (ordered-map :data-length     :uint16
-                  :optional-length :ubyte
-                  :packet-type     packet-type-frame))
-    header->packet-body
-    packet-body->header)])
+  (compile-frame
+   [sync-frame
+    (header
+     (crc8-frame
+      (ordered-map :data-length     :uint16
+                   :optional-length :ubyte
+                   :packet-type     packet-type-frame))
+     header->packet-body
+     packet-body->header)]
+   prepend-sync
+   remove-sync))

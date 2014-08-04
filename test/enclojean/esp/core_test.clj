@@ -14,5 +14,5 @@
 
 (facts "about esp codec"
   (fact "decodes a rocker switch telegram"
-    (second (decode esp rocker-switch-telegram)) =>
+    (decode esp rocker-switch-telegram) =>
     (just {:packet-type :radio, :data anything, :optional-data anything})))

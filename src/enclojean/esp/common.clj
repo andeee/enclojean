@@ -53,8 +53,10 @@
    :read-secure-device-psk 0x22})
 
 (defn get-command-code [command] 
-  (let [code (second command)]
-    [(first command) (if (vector? code) (first code) code)]))
+  (let [command-params (second command)]
+    [(first command) (if (vector? command-params)
+                       (first command-params)
+                       command-params)]))
 
 (def command-codes 
   (apply hash-map (apply concat (map get-command-code commands))))
@@ -63,11 +65,12 @@
   (enum :ubyte command-codes))
 
 (defn get-command-codec [command-kw]
-  (let [command (command-kw commands)]
-    (compile-frame 
+  (let [command-params (command-kw commands)]
+    (compile-frame
      (apply ordered-map 
             (concat [:command command-kw]
-                    (when (vector? command) (rest command)))))))
+                    (when (vector? command-params)
+                      (rest command-params)))))))
 
 (def common-command-frame
   (header command-code-frame
@@ -80,45 +83,3 @@
     (body->header [_ b] {:data-length (+ (sizeof command-code-frame)
                                          (sizeof (get-command-codec (:command b))))
                          :optional-length 0})))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
