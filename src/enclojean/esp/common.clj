@@ -43,7 +43,7 @@
    :write-repeater-level [0x09 :repeater-enable on-off-frame :repeater-level repeater-level-frame]
    :read-repeater-level 0x0A
    :write-filter-add [0x0B :filter-type filter-type-frame :filter-value :uint32 :filter-kind filter-kind-frame]
-   :write-filter-delete [0x0C :filter-type filter-type-frame :filter-kind :uint32]
+   :write-filter-delete [0x0C :filter-type filter-type-frame :filter-value :uint32]
    :write-filter-delete-all 0x0D
    :write-filter-enable [0x0E :filter-enable on-off-frame :filter-operator and-or-frame]
    :read-filters 0x0F
@@ -56,7 +56,7 @@
    :write-security [0x16 :security-level :ubyte :key :uint32 :rolling-code :uint32]
    :write-learnmode [0x17 :learn-mode-enable on-off-frame :timeout :uint32 :optional [:channel :ubyte]]
    :read-learnmode 0x18
-   :write-secure-device-add [0x19 :security-level-format :ubyte :device-id :uint32 :private-key (repeat 16 :ubyte) :rolling-code :uint24 :optional [:direction direction-frame]]
+   :write-secure-device-add [0x19 :security-level-format :ubyte :device-id :uint32 :private-key (repeat 16 :ubyte) :rolling-code (repeat 3 :ubyte) :optional [:direction direction-frame]]
    :write-secure-device-delete [0x1A :device-id :uint32 :optional [:direction direction-frame]]
    :read-secure-device-by-index [0x1B :index :ubyte :optional [:direction direction-frame]]
    :write-mode [0x1C :mode mode-frame]
@@ -95,9 +95,8 @@
          (:optional (get-all-command-map command-kw))))
 
 (defn pre-to-codec [map-fn command-kw]
-  (-> (map-fn command-kw)
-      seq
-      flatten))
+  (apply concat
+         (seq (map-fn command-kw))))
 
 (defn to-codec [map-fn command-kw]
   (compile-frame
@@ -110,9 +109,16 @@
 (def get-optional-codec
   (partial to-codec get-optional-map))
 
+(defn get-compound-codec [command-kw]
+  (compile-frame
+   (apply ordered-map
+          (concat
+           (pre-to-codec get-command-map command-kw)
+           (pre-to-codec get-optional-map command-kw)))))
+
 (def common-command-frame
   (header command-code-frame
-          get-command-codec
+          get-compound-codec
           :command))
 
 (defmethod packet :common-command [a-map]
@@ -121,51 +127,3 @@
     (body->header [_ b] {:data-length (+ (sizeof command-code-frame)
                                          (sizeof (get-command-codec (:command b))))
                          :optional-length (sizeof (get-optional-codec (:command b)))})))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
