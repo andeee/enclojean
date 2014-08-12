@@ -2,7 +2,8 @@
   (:require [enclojean.esp.core :refer [packet Packet]]
             [gloss.core :refer [enum header ordered-map
                                 compile-frame]]
-            [gloss.core.protocols :refer [sizeof]]))
+            [gloss.core.protocols :refer [sizeof]]
+            [clojure.set :refer [superset?]]))
 
 (def on-off-frame
   (enum :byte {:off 0, :on 1}))
@@ -109,21 +110,30 @@
 (def get-optional-codec
   (partial to-codec get-optional-map))
 
-(defn get-compound-codec [command-kw]
+(defn get-compound-codec [h command-kw]
   (compile-frame
    (apply ordered-map
           (concat
            (pre-to-codec get-command-map command-kw)
-           (pre-to-codec get-optional-map command-kw)))))
+           (when (> (:optional-length h) 0)
+             (pre-to-codec get-optional-map command-kw))))))
 
-(def common-command-frame
+(defn get-common-command-frame [h]
   (header command-code-frame
-          get-compound-codec
+          (partial get-compound-codec h)
           :command))
+
+(defn optional-data-available? [b]
+  (let [command-kw (:command b)
+        optional-keys (set (keys (get-optional-map command-kw)))
+        used-keys (set (keys b))]
+    (superset? used-keys optional-keys)))
 
 (defmethod packet :common-command [a-map]
   (reify Packet
-    (header->body [_ h] common-command-frame)
+    (header->body [_ h] (get-common-command-frame h))
     (body->header [_ b] {:data-length (+ (sizeof command-code-frame)
                                          (sizeof (get-command-codec (:command b))))
-                         :optional-length (sizeof (get-optional-codec (:command b)))})))
+                         :optional-length (if (optional-data-available? b)
+                                            (sizeof (get-optional-codec (:command b)))
+                                            0)})))
