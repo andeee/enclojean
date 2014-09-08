@@ -1,19 +1,7 @@
 (ns enclojean.esp.common-test
   (:use midje.sweet
         enclojean.esp.common)
-  (:require [enclojean.esp.core :refer [esp]]
-            [enclojean.bytes :as bytes]
-            [gloss.io :refer [decode encode]]
-            [byte-streams :refer [to-byte-buffers to-byte-array]]))
-
-(defn unchecked-byte-vec [v]
-  (vec (bytes/from-seq v)))
-
-(defn encode-esp [decoded]
-  (-> (encode esp decoded) to-byte-array bytes/to-seq))
-
-(defn decode-esp [telegram]
-  (decode esp (to-byte-buffers (bytes/from-seq telegram))))
+  (:require [enclojean.test-utils :refer :all]))
 
 (defn gen-encoded [command]
   (vec (map #(symbol (format "0x%02X" %)) (encode-esp command))))

@@ -1,0 +1,17 @@
+(ns enclojean.test-utils
+  (:require [enclojean.bytes :as bytes] 
+            [enclojean.esp.core :refer [esp]]
+            [byte-streams :refer [to-byte-buffers to-byte-array]]
+            [gloss.io :refer [decode encode]]))
+
+(def unchecked-byte-vec (comp vec bytes/from-seq))
+
+(def unchecked-byte-buffers (comp to-byte-buffers bytes/from-seq))
+
+(def to-byte-seq (comp bytes/to-seq to-byte-array))
+
+(defn encode-esp [decoded]
+  (-> (encode esp decoded) to-byte-seq))
+
+(defn decode-esp [telegram]
+  (decode esp (unchecked-byte-buffers telegram)))
