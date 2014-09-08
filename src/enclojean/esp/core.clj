@@ -1,8 +1,8 @@
 (ns enclojean.esp.core
   (:require [enclojean.crc.codec :refer [crc8-frame]]
-            [gloss.core :refer [byte-count compile-frame 
+            [gloss.core :refer [byte-count compile-frame
                                 defcodec enum header
-                                ordered-map]]
+                                ordered-map finite-block]]
             [gloss.core.structure :refer [convert-sequence]]))
 
 (def sync-frame (enum :ubyte {:sync 0x55}))
@@ -27,17 +27,12 @@
 
 (defmethod packet :default [a-map]
   (reify Packet
-    (header->body [_ h] (apply ordered-map 
-                               (concat [:data (repeat (:data-length h) :ubyte)]
-                                       (when (> (:optional-length h) 0)
-                                         (vector :optional-data 
-                                                 (repeat (:optional-length h) :ubyte))))))
-    (body->header [_ b] (apply array-map
-                               (concat [:data-length (count (:data b))]
-                                       (vector :optional-length 
-                                               (if (:optional-data b)
-                                                 (count (:optional-data b))
-                                                 0)))))))
+    (header->body [_ h] (ordered-map
+                         :data (finite-block (:data-length h))
+                         :optional-data (finite-block (:optional-length h))))
+    (body->header [_ b] (array-map
+                         :data-length (byte-count (:data b))
+                         :optional-length (byte-count (:optional-data b))))))
 
 (defn split-packet-body [body]
   (map #(apply hash-map %)
@@ -82,17 +77,3 @@
      packet-body->header)]
    prepend-sync
    remove-sync))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
