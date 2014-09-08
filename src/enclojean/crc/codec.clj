@@ -43,7 +43,6 @@
     (write-bytes [this buf v]
       (if (sizeof this)
         (with-buffer [buf (sizeof this)]
-          (prn v)
           (write-bytes codec buf v)
           (calc-crc8<->buf buf))
         (let [buf-seq (write-bytes codec buf v)]
