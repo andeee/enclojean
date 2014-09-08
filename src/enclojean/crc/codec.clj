@@ -21,7 +21,8 @@
     (.put buf crc8)))
 
 (defn read-crc8 [buf-seq]
-  (-> (to-byte-array buf-seq) (aget 0)))
+  (when buf-seq
+    (-> (to-byte-array buf-seq) (aget 0))))
 
 (defn crc8-frame [codec]
   (reify
@@ -42,6 +43,7 @@
     (write-bytes [this buf v]
       (if (sizeof this)
         (with-buffer [buf (sizeof this)]
+          (prn v)
           (write-bytes codec buf v)
           (calc-crc8<->buf buf))
         (let [buf-seq (write-bytes codec buf v)]

@@ -27,10 +27,17 @@
 
 (defmethod packet :default [a-map]
   (reify Packet
-    (header->body [_ h] {:data (repeat (:data-length h) :ubyte)
-                         :optional-data (repeat (:optional-length h) :ubyte)})
-    (body->header [_ b] {:data-length (byte-count (:data b))
-                         :optional-length (byte-count (:optional-data b))})))
+    (header->body [_ h] (apply ordered-map 
+                               (concat [:data (repeat (:data-length h) :ubyte)]
+                                       (when (> (:optional-length h) 0)
+                                         (vector :optional-data 
+                                                 (repeat (:optional-length h) :ubyte))))))
+    (body->header [_ b] (apply array-map
+                               (concat [:data-length (count (:data b))]
+                                       (vector :optional-length 
+                                               (if (:optional-data b)
+                                                 (count (:optional-data b))
+                                                 0)))))))
 
 (defn split-packet-body [body]
   (map #(apply hash-map %)
@@ -41,7 +48,7 @@
          [packet-type (apply packet-body-fn packet-body)])))
 
 (defn join-packet-body [packet-type-and-body]
-  (apply conj packet-type-and-body))
+  (apply array-map (apply concat (apply concat packet-type-and-body))))
 
 (defn header->packet-body [h]
   (let [p (packet h)]
@@ -75,3 +82,17 @@
      packet-body->header)]
    prepend-sync
    remove-sync))
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -28,9 +28,9 @@
 (tabular
  (facts "about common commands"
    (fact "encode works"
-     (encode-esp ?decoded) => (unchecked-byte-vec ?encoded))
+     (encode-esp (decode-esp (encode-esp ?decoded))) => (unchecked-byte-vec ?encoded))
    (fact "decode works"
-     (decode-esp ?encoded) => ?decoded))
+     (decode-esp (encode-esp (decode-esp ?encoded))) => ?decoded))
  ?decoded                            ?encoded
  (command :write-sleep
           :sleep-period 1)           [0x55 0x00 0x05 0x00
